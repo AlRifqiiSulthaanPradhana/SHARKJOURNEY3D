@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Shark Journey 3D</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { overflow: hidden; background: #001a33; font-family: 'Arial', sans-serif; }
+canvas { display: block; }
+
+/* ===== MENU ===== */
+#menu {
+  position: fixed; inset: 0;
+  background: linear-gradient(180deg, #000d1a 0%, #001e3c 60%, #001a33 100%);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  z-index: 300; color: #fff;
+}
+#menu img.logo {
+  width: clamp(80px, 14vw, 120px);
+  margin-bottom: 12px;
+  filter: drop-shadow(0 0 18px rgba(0,255,238,0.6));
+}
+#menu h1 {
+  font-size: clamp(28px, 7vw, 58px);
+  font-weight: 900; letter-spacing: 4px;
+  color: #00ffee;
+  text-shadow: 0 0 30px rgba(0,255,238,0.8), 0 0 60px rgba(0,200,255,0.4);
+  margin-bottom: 10px; text-align: center;
+}
+#menu .subtitle {
+  color: #aaddff; font-size: clamp(12px, 2vw, 15px);
+  text-align: center; line-height: 1.8; margin-bottom: 32px; opacity: 0.85;
+}
+#menu .cards {
+  display: flex; gap: 14px; margin-bottom: 36px;
+  flex-wrap: wrap; justify-content: center; padding: 0 16px;
+}
+#menu .card {
+  background: rgba(0,180,255,0.06);
+  border: 1px solid rgba(0,200,255,0.2);
+  border-radius: 14px; padding: 20px 16px;
+  width: 150px; text-align: center;
+}
+#menu .card .icon { font-size: 28px; margin-bottom: 10px; }
+#menu .card .desc { color: #cce8ff; font-size: 12px; line-height: 1.6; }
+#start-btn {
+  background: linear-gradient(90deg, #00ccff, #00ffaa);
+  border: none; border-radius: 50px;
+  color: #001a33; font-size: 17px; font-weight: 900;
+  letter-spacing: 2px; padding: 15px 48px;
+  cursor: pointer; box-shadow: 0 0 30px rgba(0,200,255,0.5);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+#start-btn:hover { transform: scale(1.05); box-shadow: 0 0 45px rgba(0,255,170,0.6); }
+#start-btn:active { transform: scale(0.97); }
+
+/* ===== LOADING ===== */
+#loading {
+  position: fixed; inset: 0; background: #001a33;
+  display: none; flex-direction: column; align-items: center; justify-content: center;
+  z-index: 200; color: #fff;
+}
+#loading-bar-wrap {
+  width: 220px; height: 6px; background: rgba(255,255,255,0.15);
+  border-radius: 3px; margin-top: 16px;
+}
+#loading-bar { height: 100%; width: 0%; background: #00bfff; border-radius: 3px; transition: width 0.2s; }
+#loading-text { font-size: 13px; opacity: 0.6; margin-top: 10px; letter-spacing: 1px; }
+
+/* ===== HUD ===== */
+#hud {
+  position: fixed; top: 16px; left: 16px;
+  background: rgba(0,0,0,0.55); border: 2px solid #00ccff;
+  border-radius: 10px; padding: 12px 18px;
+  pointer-events: none; z-index: 10; min-width: 140px;
+  display: none;
+}
+.hud-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; gap: 24px; }
+.hud-row:last-child { margin-bottom: 0; }
+.hud-label { font-size: 12px; letter-spacing: 2px; color: #aaddff; text-transform: uppercase; }
+.hud-value { font-size: 20px; font-weight: bold; color: #00ffcc; text-shadow: 0 0 8px rgba(0,255,200,0.8); }
+#combo-val { color: #FFD700; text-shadow: 0 0 8px rgba(255,215,0,0.8); }
+
+#kombo-display {
+  position: fixed; top: 50%; left: 50%; transform: translate(-50%, -60%);
+  color: #FFD700; font-size: 28px; font-weight: bold;
+  text-shadow: 0 0 20px rgba(255,215,0,1);
+  opacity: 0; transition: opacity 0.25s; pointer-events: none; z-index: 10; letter-spacing: 2px;
+  display: none;
+}
+#msg-popup {
+  position: fixed; top: 42%; left: 50%; transform: translate(-50%,-50%);
+  color: #FFD700; font-size: 38px; font-weight: bold;
+  text-shadow: 0 0 20px rgba(255,215,0,1);
+  opacity: 0; pointer-events: none; z-index: 20; transition: opacity 0.2s;
+  display: none;
+}
+#penalty-popup {
+  position: fixed; top: 55%; left: 50%; transform: translate(-50%,-50%);
+  color: #ff4444; font-size: 22px; font-weight: bold;
+  text-shadow: 0 0 15px rgba(255,0,0,0.9);
+  opacity: 0; pointer-events: none; z-index: 20; transition: opacity 0.2s;
+  display: none;
+}
+
+/* Speed bar */
+#speed-bar {
+  position: fixed; bottom: 140px; right: 20px;
+  width: 160px; pointer-events: none; z-index: 10; text-align: right;
+  display: none;
+}
+#speed-label { color: #aaddff; font-size: 10px; letter-spacing: 2px; opacity: 0.8; margin-bottom: 4px; }
+#speed-track { width: 100%; height: 5px; background: rgba(255,255,255,0.15); border-radius: 3px; overflow: hidden; }
+#speed-fill { height: 100%; width: 0%; background: linear-gradient(90deg,#00bfff,#00ff99); border-radius: 3px; transition: width 0.08s; }
+
+/* Buttons */
+#cam-btn {
+  position: fixed; top: 16px; right: 70px;
+  background: rgba(0,0,0,0.5); border: 1.5px solid #00ccff;
+  color: #00ccff; padding: 7px 14px; border-radius: 8px; cursor: pointer;
+  font-size: 12px; z-index: 10; letter-spacing: 1px; display: none;
+}
+#mute-btn {
+  position: fixed; top: 16px; right: 16px;
+  background: rgba(0,0,0,0.5); border: none;
+  border-radius: 50%; width: 42px; height: 42px;
+  font-size: 20px; cursor: pointer; z-index: 10; display: none;
+}
+
+/* Controls */
+.ctrl-btn {
+  width: 68px; height: 68px; border-radius: 50%;
+  background: rgba(0,20,60,0.6); border: 2px solid #00aaff;
+  color: #00ccff; font-size: 26px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  -webkit-tap-highlight-color: transparent; user-select: none;
+  box-shadow: 0 0 8px rgba(0,170,255,0.3);
+}
+.ctrl-btn:active { background: rgba(0,100,255,0.35); border-color: #00ffcc; color: #00ffcc; }
+#controls-forward {
+  position: fixed; bottom: 20px; left: 30px;
+  display: none; flex-direction: column; align-items: center; gap: 8px; z-index: 10;
+}
+#controls-turn {
+  position: fixed; bottom: 48px; right: 30px;
+  display: none; flex-direction: row; align-items: center; gap: 8px; z-index: 10;
+}
+</style>
+</head>
+<body>
+
+<!-- MENU -->
+<div id="menu">
+  <img src="LOGOGAME.png" class="logo" alt="Logo">
+  <h1>SHARK JOURNEY 3D</h1>
+  <p class="subtitle">
+    Makan ikan kecil untuk menambah skor!<br>
+    Hindari menabrak coral atau skormu berkurang!
+  </p>
+  <div class="cards">
+    <div class="card">
+      <div class="icon">⌨️</div>
+      <div class="desc">Gerakkan ikan menggunakan WASD atau tombol panah</div>
+    </div>
+    <div class="card">
+      <div class="icon">📷</div>
+      <div class="desc">Ganti perspektif dengan menekan tombol "Kamera"</div>
+    </div>
+    <div class="card">
+      <div class="icon">🔊</div>
+      <div class="desc">Bisukan musik menggunakan tombol mute</div>
+    </div>
+  </div>
+  <button id="start-btn">🌊 MULAI MAIN!</button>
+</div>
+
+<!-- LOADING -->
+<div id="loading">
+  <div style="font-size:18px;letter-spacing:3px;">🌊 MEMUAT DUNIA BAWAH LAUT</div>
+  <div id="loading-bar-wrap"><div id="loading-bar"></div></div>
+  <p id="loading-text">Memuat model hiu...</p>
+</div>
+
+<!-- HUD -->
+<div id="hud">
+  <div class="hud-row"><span class="hud-label">SKOR</span><span class="hud-value" id="score">0</span></div>
+  <div class="hud-row"><span class="hud-label">DIMAKAN</span><span class="hud-value" id="eaten">0</span></div>
+  <div class="hud-row"><span class="hud-label">KOMBO</span><span class="hud-value" id="combo-val">0x</span></div>
+</div>
+
+<button id="mute-btn">🔊</button>
+<div id="kombo-display">KOMBO!</div>
+<div id="msg-popup"></div>
+<div id="penalty-popup"></div>
+
+<div id="speed-bar">
+  <div id="speed-label">⚡ KECEPATAN</div>
+  <div id="speed-track"><div id="speed-fill"></div></div>
+</div>
+
+<button id="cam-btn">🔄 Kamera</button>
+
+<div id="controls-forward">
+  <button class="ctrl-btn" id="btn-up">▲</button>
+  <button class="ctrl-btn" id="btn-down">▼</button>
+</div>
+<div id="controls-turn">
+  <button class="ctrl-btn" id="btn-left">◀</button>
+  <button class="ctrl-btn" id="btn-right">▶</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="game.js"></script>
+
+<script>
+document.getElementById('start-btn').addEventListener('click', () => {
+  // 1. Sembunyikan menu
+  document.getElementById('menu').style.display = 'none';
+  // 2. Tampilkan loading
+  document.getElementById('loading').style.display = 'flex';
+  // 3. Mulai BGM (dipicu dari interaksi user = aman dari browser policy)
+  if (typeof startBGM === 'function') startBGM();
+  // 4. Mulai load game
+  if (typeof startGame === 'function') startGame();
+});
+</script>
+</body>
+</html>
