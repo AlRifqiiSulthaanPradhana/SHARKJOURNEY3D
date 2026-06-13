@@ -303,7 +303,14 @@ bgm.loop    = true;
 bgm.volume  = 0.5;
 
 function startBGM() {
-  bgm.play().catch(() => {});
+  bgm.play().then(() => {
+    // Berhasil play, baru remove listener
+    document.removeEventListener('click',      startBGM);
+    document.removeEventListener('touchstart', startBGM);
+    document.removeEventListener('keydown',    startBGM);
+  }).catch(() => {
+    // Gagal, biarkan listener tetap ada, coba lagi saat interaksi berikutnya
+  });
 }
 
 // Mute button
